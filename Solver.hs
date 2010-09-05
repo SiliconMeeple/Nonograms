@@ -69,10 +69,14 @@ solveLine board constraint = updateLine constraint board newLine
                                      
 emptyBoard (Problem rows columns) = listArray ((0,0),(length columns - 1,length rows - 1)) (repeat U)
 
-solve problem = unsolvedBoards ++ [head solvedBoards]
-  where
-    (unsolvedBoards, solvedBoards) = span (not . solved) $ iterate (solveBoard problem) (emptyBoard problem)
-      
+solve problem = takeUntilDuplicate $ iterate (solveBoard problem) (emptyBoard problem)
+               
+takeUntilDuplicate :: Eq a => [a] -> [a]
+takeUntilDuplicate [] = []
+takeUntilDuplicate [x] = [x]
+takeUntilDuplicate (x:y:xs) | x == y = [x]
+                            | otherwise = x : takeUntilDuplicate(y:xs)
+  
 -- | split at regular intervals
 chunk :: Int -> [a] -> [[a]]
 chunk _ [] = [[]]
