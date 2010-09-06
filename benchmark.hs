@@ -4,15 +4,15 @@ import Solver
 import Criterion (nf)
 import Criterion.Main (defaultMain, bench)
 
-main = defaultMain $ zipWith benchIt [1..] solvable
+main = defaultMain $ zipWith benchIt [1..] solvableBoards
   where
     benchIt i b = bench ("Board " ++ show i) $ nf solveIt b
-    solveIt = length . solve 
+    solveIt b = length $ constraintSolve b (emptyBoard b)
 
-solvable = [testBoard, testBoard2, testBoard4, testBoard6, testBoard7, testBoard8]
+solvableBoards = [testBoard, testBoard2, testBoard3, testBoard4, testBoard6, testBoard7, testBoard8]
 
-currentlyInsoluable = [ testBoard3
-                      , testBoard9 -- 20x15
+currentlyInsoluable = 
+                      [ testBoard9 -- 20x15
                       , testBoard5
                       , testBoard10
                       , testBoard11

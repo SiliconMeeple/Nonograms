@@ -2,6 +2,7 @@ module Solver where
 
 import Data.List
 import Data.Array
+import Data.Function
 import Control.Monad.Logic
 import Control.Monad
 import Debug.Trace
@@ -33,7 +34,9 @@ poss' width all@(c:cs)
 possible :: Line -> Line -> Bool
 possible = (and .) . zipWith match
 
--- possibleLine potentialLine matches
+possibleLines :: Board -> Constraint -> [Line]
+possibleLines b c = filter (possible $ extractLine c b) (poss c)
+
 match F G = False
 match G F = False
 match _ _ = True
@@ -59,17 +62,36 @@ updateLine c board = (board //) . zip (line c)
 solved :: Board -> Bool
 solved = all (/=U) . elems
 
-solveBoard :: Problem -> Board -> Board
-solveBoard (Problem rows columns) b = foldl solveLine b (rows ++ columns)
-solveLine :: Board -> Constraint -> Board
-solveLine board constraint = updateLine constraint board newLine
+solvable :: Problem -> Board -> Bool
+solvable (Problem rows columns) b = all (solvableLine b) (rows ++ columns)
+solvableLine :: Board -> Constraint -> Bool
+solvableLine board constraint = (not . null . filter (possible $ extractLine constraint board)) (poss constraint)
+
+guess :: Problem -> Board -> [Board]
+guess (Problem rows columns) b = do 
+  constraint <- rows ++ columns
+  line <- filter ((> 1) . length) $ sortBy (compare `on` length) $ possibleLines b constraint
+  return $ updateLine constraint b line
+
+propagateConstraints :: Problem -> Board -> Board
+propagateConstraints (Problem rows columns) b = foldl propagateThroughLine b (rows ++ columns)
+propagateThroughLine :: Board -> Constraint -> Board
+propagateThroughLine board constraint = updateLine constraint board newLine
                                    where
                                      oldLine = extractLine constraint board
-                                     newLine = zipWith update (findCommon $ filter (possible oldLine) (poss constraint)) oldLine
+                                     newLine = zipWith update (findCommon $ possibleLines board constraint) oldLine
                                      
 emptyBoard (Problem rows columns) = listArray ((0,0),(length columns - 1,length rows - 1)) (repeat U)
 
-solve problem = takeUntilDuplicate $ iterate (solveBoard problem) (emptyBoard problem)
+solve problem = searchSolve problem $ emptyBoard problem
+
+searchSolve problem board | solved $ last constraintBoards = constraintBoards
+                          | otherwise = constraintBoards ++ searchBoards
+                            where
+                              constraintBoards = constraintSolve problem board
+                              searchBoards = head $ filter (solved . last) $ map (searchSolve problem) $ guess problem $ last constraintBoards
+
+constraintSolve problem = takeUntilDuplicate . iterate (propagateConstraints problem)
                
 takeUntilDuplicate :: Eq a => [a] -> [a]
 takeUntilDuplicate [] = []
