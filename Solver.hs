@@ -1,5 +1,6 @@
 module Solver where
 
+import Data.Ord (comparing)
 import Data.List
 import Data.Array
 import Data.Function
@@ -29,7 +30,7 @@ poss' width all@(c:cs)
     remainder <- poss' (width - length gaps - length block) cs       
     return $ gaps ++ block ++ remainder
       where
-        block = replicate c F ++ (if not (null cs) then [G] else []) -- TODO Less clumsy way of getting the last gap
+        block = replicate c F ++ [G | not (null cs)]
 
 possible :: Line -> Line -> Bool
 possible = (and .) . zipWith match
@@ -70,7 +71,7 @@ solvableLine board constraint = (not . null . filter (possible $ extractLine con
 guess :: Problem -> Board -> [Board]
 guess (Problem rows columns) b = do 
   constraint <- rows ++ columns
-  line <- filter ((> 1) . length) $ sortBy (compare `on` length) $ possibleLines b constraint
+  line <- filter ((> 1) . length) $ sortBy (comparing length) $ possibleLines b constraint
   return $ updateLine constraint b line
 
 propagateConstraints :: Problem -> Board -> Board
@@ -114,7 +115,7 @@ problem rows columns = let p = go p rows columns
                                  where rowConstraints = zipWith (Constraint p H) [0..] rows       -- Going down
                                        columnConstraints = zipWith (Constraint p V) [0..] columns -- Going across
 
-showBoard b = (unlines . (chunk $ (+1) $ snd $ snd $ bounds b) . map showSquare . elems) b
+showBoard b = (unlines . chunk ((+1) $ snd $ snd $ bounds b) . map showSquare . elems) b
 
 showSquare F = 'X'
 showSquare G = ' '
